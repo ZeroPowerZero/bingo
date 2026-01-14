@@ -17,6 +17,9 @@ offset_right = -423.0
 offset_bottom = -227.0
 grow_horizontal = 2
 grow_vertical = 2
+scale = Vector2(1.2000012, 1.3599994)
+size_flags_horizontal = 4
+size_flags_vertical = 4
 
 [node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/MainMenu"]
 layout_mode = 2

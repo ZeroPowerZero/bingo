@@ -12,10 +12,24 @@ var bingo_check : Array[bool] =[false]
 var current_number := 1
 var filled :Array[int] = []
 
+var players: Array[int] = [1,2]
+var current_turn := 0
+var my_peer_id := 0
+var opp_filled : bool = false
+var selected_num : int 
+
+var is_my_turn : bool = false
 
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	if multiplayer.is_server():
+		my_peer_id = multiplayer.get_unique_id()
+		print(my_peer_id)
+	else:
+		my_peer_id = 2;
+		print(my_peer_id)
+		
 	bingo_check.resize(25)
 	bingo_check.fill(false)
 	
@@ -26,35 +40,62 @@ func _ready() -> void:
 		var btn = grid.get_child(i)
 		btn.text = ""
 		btn.pressed.connect(on_cell_pressed.bind(i))
-	
 
+
+@rpc("any_peer")
+func opp_has_filled():
+	opp_filled = true
+	
+@rpc("any_peer","call_local")
+func ur_turn():
+	is_my_turn = true
 
 func on_cell_pressed(index):
 	if game_mode == FILL_MODE:
-		if current_number > 25:	
+		if current_number > 25:
+			if my_peer_id == 2:
+				rpc("opp_has_filled")
+				rpc_id(1,"ur_turn")
 			game_mode = CUT_MODE
-			return   # filling done
+			return
 		
 		if filled[index] != 0:
-			return   # already filled
+			return
 
 		filled[index] = current_number
 		grid.get_child(index).text = str(current_number)
-
 		current_number += 1
 		return
+
+	# ---------------- CUT MODE ------------------
+	if !opp_filled:
+		print("wait for opp to fill")
 		
-# ---------------- CUT MODE ------------------
+	if players.size() > 0 and !is_my_turn:
+		print("Not your turn")
+		return
 
-	print("not its cross time")
 	if bingo_check[index]:
-		return  # already cut
-
+		return
+	
 	bingo_check[index] = true
+	
+	selected_num = int(grid.get_child(index).text)
 	grid.get_child(index).text = "❌"
-
+	rpc("cross_ur_no",selected_num)
+	rpc("ur_turn")
+	is_my_turn = false
 	check_bingo()
 
+@rpc("any_peer","call_remote")
+func cross_ur_no(num :int):
+	grid.get_child(find(num)).text = "❌"
+
+func find(num : int):
+	for i in range(25):
+		if filled[i]==num:
+			return i
+	
 func check_bingo():
 	var lines := 0
 
@@ -94,5 +135,3 @@ func update_bingo_label(lines):
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
